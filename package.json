@@ -8,7 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
-    "@orbi-wallet/sdk": "^0.0.2",
+    "@orbi-wallet/sdk": "^0.0.4",
     "@stellar/stellar-sdk": "^15.1.0",
     "next": "^15.0.0",
     "react": "^18.3.0",

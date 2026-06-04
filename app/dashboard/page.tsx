@@ -6,9 +6,7 @@ import { Address, Asset, Networks, nativeToScVal, xdr } from '@stellar/stellar-s
 import { orbi } from '../../lib/orbi';
 
 const NETWORK = (process.env.NEXT_PUBLIC_STELLAR_NETWORK ?? 'testnet') as 'testnet' | 'mainnet';
-const HORIZON_URL = NETWORK === 'mainnet'
-  ? 'https://horizon.stellar.org'
-  : 'https://horizon-testnet.stellar.org';
+const API_URL = process.env.NEXT_PUBLIC_ORBI_API_URL ?? 'https://api.orbiwallet.xyz';
 const NETWORK_PASSPHRASE = NETWORK === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET;
 const NATIVE_SAC_ID = Asset.native().contractId(NETWORK_PASSPHRASE);
 const EXPLORER_BASE = NETWORK === 'mainnet'
@@ -19,10 +17,6 @@ function truncate(addr: string) {
   return `${addr.slice(0, 6)}…${addr.slice(-6)}`;
 }
 
-interface HorizonBalance {
-  asset_type: string;
-  balance: string;
-}
 
 function Dashboard() {
   const router = useRouter();
@@ -43,12 +37,9 @@ function Dashboard() {
     if (!addr) { router.replace('/'); return; }
     setWalletAddress(addr);
 
-    fetch(`${HORIZON_URL}/accounts/${addr}`)
+    fetch(`${API_URL}/v1/wallet/balance/${addr}`)
       .then(r => r.json())
-      .then((data: { balances?: HorizonBalance[] }) => {
-        const xlm = data.balances?.find(b => b.asset_type === 'native')?.balance ?? '0';
-        setBalance(xlm);
-      })
+      .then((data: { xlm?: string }) => setBalance(data.xlm ?? '0'))
       .catch(() => setBalance('—'));
 
     if (searchParams.get('sent') === '1') {
@@ -102,8 +93,8 @@ function Dashboard() {
   }
 
   function handleDisconnect() {
-    localStorage.clear();
-    router.replace('/');
+    localStorage.removeItem('walletAddress');
+    orbi.disconnect(window.location.origin);
   }
 
   if (!walletAddress) return null;

@@ -44,7 +44,7 @@ export default function ConnectPage() {
               Open Dashboard
             </button>
             <button
-              onClick={() => { localStorage.clear(); setConnected(false); }}
+              onClick={() => { localStorage.removeItem('walletAddress'); orbi.disconnect(window.location.origin); }}
               className="w-full text-slate-500 hover:text-slate-300 text-sm py-2 transition-colors"
             >
               Disconnect
