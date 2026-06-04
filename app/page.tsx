@@ -2,11 +2,22 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Address, nativeToScVal, xdr } from '@stellar/stellar-sdk';
+import { Address, xdr } from '@stellar/stellar-sdk';
 import { orbi } from '../lib/orbi';
 
-const POINTS_CONTRACT_ID = 'CA35JGRCIEABUUNW43PJ7N3CJNSPO7SAR66VGJQUT5FSUFDSWATKAURB';
+const POINTS_CONTRACT_ID = 'CB44L2DCDAEOLGC2444FN2J22KBDQ6SP24VBMWXJTFM6XEM3LV4KG6EA';
 const CLAIM_AMOUNT = 100n;
+
+// Encode ScVal::scvI128(value) using DataView — works natively in all browsers
+// without needing the Buffer BigInt64 polyfill that js-xdr relies on.
+function i128ScValBase64(value: bigint): string {
+  const buf = new Uint8Array(20);
+  const view = new DataView(buf.buffer);
+  view.setUint32(0, 10, false);           // discriminant: scvI128 = 10
+  view.setBigInt64(4, 0n, false);          // hi = 0 (positive values only)
+  view.setBigUint64(12, value, false);     // lo = value
+  return btoa(String.fromCharCode(...Array.from(buf)));
+}
 const SOROBAN_RPC = 'https://soroban-testnet.stellar.org';
 
 async function fetchPoints(walletAddress: string): Promise<number> {
@@ -32,8 +43,8 @@ async function fetchPoints(walletAddress: string): Promise<number> {
   });
   const data = await res.json() as { result?: { entries?: { xdr: string }[] } };
   if (!data.result?.entries?.length) return 0;
-  const entry = xdr.LedgerEntryData.fromXDR(data.result.entries[0].xdr, 'base64');
-  const val = entry.contractData().val();
+  const ledgerEntry = xdr.LedgerEntry.fromXDR(data.result.entries[0].xdr, 'base64');
+  const val = ledgerEntry.data().contractData().val();
   if (val.switch().name === 'scvI128') {
     const hi = BigInt(val.i128().hi().toString());
     const lo = BigInt(val.i128().lo().toString());
@@ -70,11 +81,8 @@ function MintPage() {
     if (!walletAddress) return;
     setClaiming(true);
 
-    const args: xdr.ScVal[] = [
-      new Address(walletAddress).toScVal(),
-      nativeToScVal(CLAIM_AMOUNT, { type: 'i128' }),
-    ];
-    const argsXdr = args.map(a => Buffer.from(a.toXDR()).toString('base64'));
+    const toArg = Buffer.from(new Address(walletAddress).toScVal().toXDR()).toString('base64');
+    const argsXdr = [toArg, i128ScValBase64(CLAIM_AMOUNT)];
 
     sessionStorage.setItem('pendingContractId', POINTS_CONTRACT_ID);
     sessionStorage.setItem('pendingFunctionName', 'mint');
