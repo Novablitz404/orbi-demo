@@ -52,8 +52,9 @@ async function fetchPoints(walletAddress: string): Promise<number> {
   });
   const data = await res.json() as { result?: { entries?: { xdr: string }[] } };
   if (!data.result?.entries?.length) return 0;
-  const entry = xdr.LedgerEntry.fromXDR(data.result.entries[0].xdr, 'base64');
-  const val = entry.data().contractData().val();
+  // Soroban RPC getLedgerEntries returns LedgerEntryData (not a full LedgerEntry).
+  const entryData = xdr.LedgerEntryData.fromXDR(data.result.entries[0].xdr, 'base64');
+  const val = entryData.contractData().val();
   if (val.switch().name === 'scvI128') {
     const hi = BigInt(val.i128().hi().toString());
     const lo = BigInt(val.i128().lo().toString());
