@@ -14,7 +14,7 @@ export default function SignCallbackPage() {
 
     const contractId = sessionStorage.getItem('pendingContractId');
     const functionName = sessionStorage.getItem('pendingFunctionName');
-    if (!contractId || !functionName) { router.replace('/dashboard'); return; }
+    if (!contractId || !functionName) { router.replace('/'); return; }
 
     sessionStorage.removeItem('pendingContractId');
     sessionStorage.removeItem('pendingFunctionName');
@@ -31,8 +31,7 @@ export default function SignCallbackPage() {
       .then(({ opId }) => orbi.waitForConfirmation(opId))
       .then((status) => {
         if (status.status === 'confirmed') {
-          if (status.txHash) sessionStorage.setItem('lastTxHash', status.txHash);
-          router.replace('/dashboard?sent=1');
+          router.replace('/?claimed=1');
         } else {
           setError(status.error ?? 'Transaction failed');
         }
@@ -47,10 +46,10 @@ export default function SignCallbackPage() {
           <p className="text-red-400 text-sm">{error}</p>
         </div>
         <button
-          onClick={() => router.replace('/dashboard')}
+          onClick={() => router.replace('/')}
           className="text-blue-400 text-sm hover:text-blue-300 transition-colors"
         >
-          Back to Dashboard
+          Back
         </button>
       </main>
     );

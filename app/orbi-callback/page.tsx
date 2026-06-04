@@ -12,7 +12,7 @@ export default function OrbiCallbackPage() {
       .then((wallet) => {
         if (!wallet) { router.replace('/'); return; }
         localStorage.setItem('walletAddress', wallet.walletAddress);
-        router.replace('/dashboard');
+        router.replace('/');
       })
       .catch(() => router.replace('/'));
   }, [router]);
