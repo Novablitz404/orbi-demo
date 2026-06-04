@@ -202,7 +202,7 @@ function Dashboard({
             disabled={claiming}
             className="w-full bg-[#30b27c] hover:bg-[#28a06e] disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl transition-colors"
           >
-            {claiming ? 'Redirecting to sign…' : `Claim ${Number(CLAIM_AMOUNT)} Points`}
+            {claiming ? 'Claiming…' : `Claim ${Number(CLAIM_AMOUNT)} Points`}
           </button>
         </div>
 
@@ -235,10 +235,23 @@ function App() {
     fetchXlm(addr).then(setXlm).catch(() => setXlm('—'));
     fetchPoints(addr).then(setPoints).catch(() => setPoints(0));
 
-    if (searchParams.get('claimed') === '1') {
-      setJustClaimed(true);
-      const t = setTimeout(() => setJustClaimed(false), 6000);
-      return () => clearTimeout(t);
+    // A claim was submitted and we returned with its opId — confirm it here in
+    // the background so the user sees the dashboard, not a submitting screen.
+    const pending = searchParams.get('pending');
+    if (pending) {
+      setClaiming(true);
+      window.history.replaceState({}, '', '/'); // drop ?pending from the URL
+      orbi.waitForConfirmation(pending)
+        .then((status) => {
+          if (status.status === 'confirmed') {
+            setJustClaimed(true);
+            setTimeout(() => setJustClaimed(false), 6000);
+            // Balance may lag the SSE 'confirmed' by a moment — refetch shortly after.
+            setTimeout(() => { fetchPoints(addr).then(setPoints).catch(() => {}); }, 1200);
+          }
+        })
+        .catch(() => {})
+        .finally(() => setClaiming(false));
     }
   }, [searchParams]);
 
